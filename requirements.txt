@@ -1,0 +1,24 @@
+# Backend
+fastapi
+uvicorn
+psycopg2-binary
+sqlalchemy
+python-dotenv
+
+# Frontend
+streamlit
+
+# AI & RAG
+google-genai
+langchain-community
+chromadb
+pypdf2
+pillow
+langchain-google-genai
+
+# Utils
+python-multipart
+passlib[bcrypt]
+
+# Database
+asyncpg
