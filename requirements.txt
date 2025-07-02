@@ -4,6 +4,7 @@ uvicorn
 psycopg2-binary
 sqlalchemy
 python-dotenv
+protobuf==4.25.3
 
 # Frontend
 streamlit
@@ -11,14 +12,22 @@ streamlit
 # AI & RAG
 google-genai
 langchain-community
-chromadb
+langchain-chroma>=0.1.2
+chromadb==0.4.24
+opentelemetry-api==1.22.0
+opentelemetry-sdk==1.22.0
+numpy==1.26.4
+python-docx
+python-pptx
 pypdf2
+pytesseract
 pillow
 langchain-google-genai
 
 # Utils
 python-multipart
 passlib[bcrypt]
+bcrypt==4.0.1
 
 # Database
 asyncpg

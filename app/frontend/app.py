@@ -68,7 +68,7 @@ if 'file_uploader_key' not in st.session_state:
     st.session_state['file_uploader_key'] = 0
 
 st.header("Upload File (PDF/Gambar)")
-uploaded_file = st.file_uploader("Pilih file PDF atau gambar", type=["pdf", "png", "jpg", "jpeg"], key=st.session_state['file_uploader_key'])
+uploaded_file = st.file_uploader("Pilih file PDF atau gambar", type=["pdf", "png", "jpg", "jpeg", "ppt", "pptx"], key=st.session_state['file_uploader_key'])
 
 if uploaded_file and not st.session_state['upload_success']:
     files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}

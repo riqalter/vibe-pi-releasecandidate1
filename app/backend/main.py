@@ -8,19 +8,22 @@ from .rag import generate_answer, recommend_prompts
 from datetime import datetime
 from passlib.hash import bcrypt
 import os
+import logging
 
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-UPLOAD_DIR = "uploads"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # .../app/backend
+PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))  # .../ (project root)
+UPLOAD_DIR = os.path.join(PROJECT_ROOT, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+logging.basicConfig(level=logging.INFO)
+logging.info(f"UPLOAD_DIR is set to: {UPLOAD_DIR}")
+
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+app = FastAPI(lifespan=lifespan)
+
+# Mount static files for uploads after UPLOAD_DIR is set
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 def get_db():
@@ -29,10 +32,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-@app.on_event("startup")
-def on_startup():
-    init_db()
 
 @app.post("/upload/")
 def upload_file(user_id: int = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
