@@ -10,6 +10,10 @@ from passlib.hash import bcrypt
 import os
 import logging
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # .../app/backend
 PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))  # .../ (project root)
 UPLOAD_DIR = os.path.join(PROJECT_ROOT, "uploads")

@@ -3,6 +3,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://user:password@localhost:5432/chatbotdb')
 
 engine = create_engine(DATABASE_URL)

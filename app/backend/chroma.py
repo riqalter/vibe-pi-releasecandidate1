@@ -9,9 +9,12 @@ from PIL import Image
 from docx import Document as DocxDocument
 from pptx import Presentation
 import os
-import tempfile
 import logging
 import pytesseract
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 CHROMA_DIR = "chroma_db"
 
@@ -19,7 +22,10 @@ CHROMA_DIR = "chroma_db"
 chroma_client = chromadb.Client(Settings(persist_directory=CHROMA_DIR))
 
 # Embedding Google GenAI
-embedding = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+embedding = GoogleGenerativeAIEmbeddings(
+    model="models/text-embedding-004",
+    google_api_key=os.getenv("GOOGLE_API_KEY", "")
+    )
 
 # LangChain VectorStore
 vectorstore = Chroma(
