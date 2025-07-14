@@ -92,6 +92,19 @@ def delete_chat_history(user_id):
     response = requests.delete(f"{API_URL}/history/{user_id}")
     return response.json()
 
+def handle_upload():
+    if st.session_state.uploader:
+        with st.spinner("Mengupload dan memproses file..."):
+            uploaded_file = st.session_state.uploader
+            user_id = st.session_state.user_id
+            result = upload_file(user_id, uploaded_file)
+            if "file_id" in result:
+                st.session_state.file_id = result["file_id"]
+                st.session_state.current_file_name = result["filename"]
+                st.sidebar.success(f"File '{result['filename']}' berhasil diupload!")
+            else:
+                st.sidebar.error("Gagal mengupload file.")
+
 def local_css(file_name):
     try:
         with open(file_name) as f:
@@ -151,18 +164,12 @@ if not st.session_state.chat_history:
 
 # --- File Management ---
 st.sidebar.title("File Anda")
-uploaded_file = st.sidebar.file_uploader("Upload file baru", type=['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'])
-
-if uploaded_file is not None:
-    with st.spinner("Mengupload dan memproses file..."):
-        result = upload_file(user_id, uploaded_file)
-        if "file_id" in result:
-            st.session_state.file_id = result["file_id"]
-            st.session_state.current_file_name = result["filename"]
-            st.sidebar.success(f"File '{result['filename']}' berhasil diupload!")
-            st.rerun()
-        else:
-            st.sidebar.error("Gagal mengupload file.")
+st.sidebar.file_uploader(
+    "Upload file baru", 
+    type=['pdf', 'png', 'jpg', 'jpeg', 'docx', 'pptx'], 
+    key="uploader",
+    on_change=handle_upload
+)
 
 if st.sidebar.button("Refresh Daftar File"):
     st.rerun()

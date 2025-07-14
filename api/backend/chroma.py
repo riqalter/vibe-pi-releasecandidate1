@@ -11,6 +11,7 @@ from pptx import Presentation
 import os
 import logging
 import pytesseract
+import uuid
 
 from dotenv import load_dotenv
 
@@ -112,19 +113,50 @@ def query_rag(query, top_k=3, file_path=None):
         from langchain.text_splitter import RecursiveCharacterTextSplitter
         from langchain.docstore.document import Document
         if file_path.endswith('.pdf'):
-            text = extract_text_from_pdf(file_path)
+            loaded_docs = extract_text_from_pdf(file_path)
         elif file_path.endswith('.docx'):
-            text = extract_text_from_docx(file_path)
+            loaded_docs = extract_text_from_docx(file_path)
         elif file_path.endswith('.pptx'):
-            text = extract_text_from_pptx(file_path)
+            loaded_docs = extract_text_from_pptx(file_path)
         elif file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
-            text = extract_text_from_image(file_path)
+            loaded_docs = extract_text_from_image(file_path)
         else:
-            text = ""
+            loaded_docs = []
+
+        text = " ".join([doc.page_content for doc in loaded_docs])
+        
         splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-        docs = [Document(page_content=chunk) for chunk in splitter.split_text(text)]
-        results = [(doc, 0) for doc in docs if query.lower() in doc.page_content.lower()][:top_k]
-        return [doc for doc, _ in results]
+        chunks = splitter.split_text(text)
+        
+        # Create a temporary collection for the specific file
+        temp_collection_name = f"temp_rag_docs_{uuid.uuid4().hex}"
+        temp_collection = chroma_client.create_collection(name=temp_collection_name)
+        
+        # Add documents to the temporary collection
+        temp_collection.add(
+            documents=[chunk for chunk in chunks],
+            metadatas=[{"source": file_path}] * len(chunks),
+            ids=[f"doc_{i}" for i in range(len(chunks))]
+        )
+        
+        # Perform similarity search on the temporary collection
+        results = temp_collection.query(
+            query_texts=[query],
+            n_results=top_k,
+            include=['documents', 'metadatas']
+        )
+        
+        # Extract documents from results
+        docs = []
+        if results and results['documents']:
+            for i, doc_content in enumerate(results['documents'][0]):
+                doc_metadata = results['metadatas'][0][i]
+                docs.append(Document(page_content=doc_content, metadata=doc_metadata))
+        
+        # Delete the temporary collection
+        chroma_client.delete_collection(name=temp_collection_name)
+        
+        return docs
     else:
         docs = vectorstore.similarity_search(query, k=top_k)
         return docs
