@@ -9,6 +9,7 @@ from datetime import datetime
 from passlib.hash import bcrypt
 import os
 import logging
+import json
 
 from dotenv import load_dotenv
 
@@ -86,11 +87,11 @@ def chat(user_id: int = Form(...), message: str = Form(...), file_id: int = Form
     else:
         docs = query_rag(message)
     
-    answer = generate_answer(message, docs, history)
-    bot_msg = Message(user_id=user_id, content=answer, timestamp=datetime.now(), role='assistant')
+    answer, citations_found = generate_answer(message, docs, history)
+    bot_msg = Message(user_id=user_id, content=answer, timestamp=datetime.now(), role='assistant', citations_json=json.dumps(citations_found))
     db.add(bot_msg)
     db.commit()
-    return {"answer": answer}
+    return {"answer": answer, "citations": citations_found}
 
 @app.get("/recommend_prompt/{user_id}")
 def recommend_prompt(user_id: int, file_id: int = None, n: int = 6, db: Session = Depends(get_db)):
@@ -114,7 +115,7 @@ def recommend_prompt(user_id: int, file_id: int = None, n: int = 6, db: Session 
 @app.get("/history/{user_id}")
 def get_history(user_id: int, db: Session = Depends(get_db)):
     messages = db.query(Message).filter(Message.user_id == user_id).order_by(Message.timestamp).all()
-    return [{"role": m.role, "content": m.content} for m in messages]
+    return [{"role": m.role, "content": m.content, "citations": json.loads(m.citations_json) if m.citations_json else []} for m in messages]
 
 @app.delete("/history/{user_id}")
 def delete_history(user_id: int, db: Session = Depends(get_db)):

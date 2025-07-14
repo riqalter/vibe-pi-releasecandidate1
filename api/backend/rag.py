@@ -1,5 +1,6 @@
 from google import genai
 import os
+import re
 
 from dotenv import load_dotenv
 
@@ -19,7 +20,8 @@ def generate_answer(query, context_docs=None, history=None):
         for doc in context_docs:
             source_info = ""
             if "filename" in doc.metadata:
-                source_info += f"Source: {doc.metadata['filename']}"
+                cleaned_filename = re.sub(r'^\d{14}_', '', doc.metadata['filename'])
+                source_info += f"Source: {cleaned_filename}"
             if "page_number" in doc.metadata:
                 source_info += f", Page: {doc.metadata['page_number']}"
             if "slide_number" in doc.metadata:
@@ -50,7 +52,19 @@ Answer:
         model=MODEL_NAME,
         contents=prompt
     )
-    return response.text
+    answer = response.text
+
+    # Extract and format citations
+    citation_pattern = r'\[(.*?)\]'
+    citations_found = re.findall(citation_pattern, answer)
+    
+    # Replace citations with numbers
+    def replace_citation(match):
+        return f"[{citations_found.index(match.group(1)) + 1}]"
+
+    processed_answer = re.sub(citation_pattern, replace_citation, answer)
+    
+    return processed_answer, citations_found
 
 def recommend_prompts(context_docs, n=6):
     context = "\n\n".join([doc.page_content[:500] for doc in context_docs])

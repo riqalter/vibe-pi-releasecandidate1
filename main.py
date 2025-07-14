@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import json
+import re
 
 # --- Page and Session Configuration ---
 st.set_page_config(
@@ -100,8 +101,8 @@ def handle_upload():
             result = upload_file(user_id, uploaded_file)
             if "file_id" in result:
                 st.session_state.file_id = result["file_id"]
-                st.session_state.current_file_name = result["filename"]
-                st.sidebar.success(f"File '{result['filename']}' berhasil diupload!")
+                st.session_state.current_file_name = re.sub(r'^\d{14}_', '', result["filename"])
+                st.sidebar.success(f"File '{st.session_state.current_file_name}' berhasil diupload!")
             else:
                 st.sidebar.error("Gagal mengupload file.")
 
@@ -160,7 +161,7 @@ if st.sidebar.button("Logout"):
 
 # Load chat history once after login
 if not st.session_state.chat_history:
-    st.session_state.chat_history = [(msg['role'], msg['content']) for msg in get_chat_history(user_id)]
+    st.session_state.chat_history = [(msg['role'], msg['content'], []) for msg in get_chat_history(user_id)]
 
 # --- File Management ---
 st.sidebar.title("File Anda")
@@ -177,10 +178,11 @@ if st.sidebar.button("Refresh Daftar File"):
 user_files = get_user_files(user_id)
 if user_files:
     st.sidebar.subheader("Daftar File Tersimpan")
+    timestamp_regex = r'^\d{14}_'
     for f in user_files:
         col1, col2, col3 = st.sidebar.columns([3, 1, 1])
         with col1:
-            if st.button(f"Chat: {f['filename'][:20]}...", key=f"select_{f['id']}"):
+            if st.button(f"Chat: {re.sub(timestamp_regex, '', f['filename'])[:20]}...", key=f"select_{f['id']}"):
                 st.session_state.file_id = f['id']
                 st.session_state.current_file_name = f['filename']
                 st.rerun()
@@ -195,13 +197,18 @@ if user_files:
 # --- Chat Interface ---
 st.header("Chat")
 if st.session_state.current_file_name:
-    st.info(f"Saat ini chat dengan file: **{st.session_state.current_file_name}**")
+    timestamp_regex = r'^\d{14}_'
+    st.info(f"Saat ini chat dengan file: **{re.sub(timestamp_regex, '', st.session_state.current_file_name)}**")
 else:
     st.info("Upload atau pilih file untuk memulai chat.")
 
-for author, text in st.session_state.chat_history:
+for author, text, citations in st.session_state.chat_history:
     with st.chat_message(author):
         st.markdown(text)
+        if citations:
+            with st.expander("Lihat Sumber"):
+                for i, citation_text in enumerate(citations):
+                    st.markdown(f"**Sumber {i+1}:** {citation_text}")
 
 # --- Recommended Prompts ---
 st.sidebar.title("Rekomendasi Prompt")
@@ -224,7 +231,7 @@ if st.session_state.get("prompt_from_recommendation"):
     prompt = st.session_state.pop("prompt_from_recommendation")
 
 if prompt:
-    st.session_state.chat_history.append(("user", prompt))
+    st.session_state.chat_history.append(("user", prompt, []))
     with st.chat_message("user"):
         st.markdown(prompt)
 
@@ -232,5 +239,8 @@ if prompt:
         history_for_api = st.session_state.chat_history[-10:]
         response = get_chat_response(user_id, prompt, st.session_state.file_id, history_for_api)
         answer = response.get("answer", "Maaf, terjadi kesalahan.")
-        st.session_state.chat_history.append(("assistant", answer))
+        citations = response.get("citations", [])
+
+        st.session_state.chat_history.append(("assistant", answer, citations))
+
         st.rerun()

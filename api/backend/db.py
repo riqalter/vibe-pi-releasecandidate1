@@ -27,6 +27,7 @@ class Message(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
     role = Column(String, default='user')
     content = Column(Text)
+    citations_json = Column(Text, nullable=True) # New column for citations
     timestamp = Column(DateTime)
     user = relationship('User', back_populates='messages')
 
