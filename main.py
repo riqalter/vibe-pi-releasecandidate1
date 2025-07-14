@@ -161,7 +161,7 @@ if st.sidebar.button("Logout"):
 
 # Load chat history once after login
 if not st.session_state.chat_history:
-    st.session_state.chat_history = [(msg['role'], msg['content'], []) for msg in get_chat_history(user_id)]
+    st.session_state.chat_history = [(msg['role'], msg['content'], msg.get('citations', [])) for msg in get_chat_history(user_id)]
 
 # --- File Management ---
 st.sidebar.title("File Anda")
