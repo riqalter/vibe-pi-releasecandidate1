@@ -24,7 +24,7 @@ chroma_client = chromadb.Client(Settings(persist_directory=CHROMA_DIR))
 # Embedding Google GenAI
 embedding = GoogleGenerativeAIEmbeddings(
     model="models/text-embedding-004",
-    google_api_key=os.getenv("GOOGLE_API_KEY", "")
+    GOOGLE_API_KEY=os.getenv("GOOGLE_API_KEY", "")
     )
 
 # LangChain VectorStore
@@ -38,52 +38,74 @@ logging.basicConfig(level=logging.INFO)
 
 def extract_text_from_pdf(file_path):
     reader = PdfReader(file_path)
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text() or ""
-    return text
+    docs = []
+    for i, page in enumerate(reader.pages):
+        content = page.extract_text() or ""
+        if content:
+            docs.append(Document(page_content=content, metadata={"page_number": i + 1}))
+    return docs
 
 def extract_text_from_image(file_path):
     image = Image.open(file_path)
     text = pytesseract.image_to_string(image, lang='eng')
-    return text
+    if text:
+        return [Document(page_content=text, metadata={"page_number": 1})]
+    return []
 
 def extract_text_from_docx(file_path):
     doc = DocxDocument(file_path)
-    text = "\n".join([para.text for para in doc.paragraphs])
-    return text
+    docs = []
+    for i, para in enumerate(doc.paragraphs):
+        if para.text:
+            docs.append(Document(page_content=para.text, metadata={"paragraph_number": i + 1}))
+    return docs
 
 def extract_text_from_pptx(file_path):
     prs = Presentation(file_path)
-    text = ""
-    for slide in prs.slides:
+    docs = []
+    for i, slide in enumerate(prs.slides):
+        slide_text = ""
         for shape in slide.shapes:
             if hasattr(shape, "text"):
-                text += shape.text + "\n"
-    return text
+                slide_text += shape.text + "\n"
+        if slide_text:
+            docs.append(Document(page_content=slide_text, metadata={"slide_number": i + 1}))
+    return docs
 
 def index_file(file_path, filetype, metadata=None):
     logging.info(f"[ChromaDB] Mulai indexing file: {file_path} ({filetype}) dengan metadata: {metadata}")
+    docs = []
     if filetype == "application/pdf":
-        text = extract_text_from_pdf(file_path)
+        docs = extract_text_from_pdf(file_path)
     elif filetype.startswith("image/"):
-        text = extract_text_from_image(file_path)
-    elif filetype == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" or file_path.endswith(".docx"):
-        text = extract_text_from_docx(file_path)
+        docs = extract_text_from_image(file_path)
+    elif filetype == "application/vnd.openxmlformats-officedocument.wordprocessingprocessingml.document" or file_path.endswith(".docx"):
+        docs = extract_text_from_docx(file_path)
     elif filetype == "application/vnd.openxmlformats-officedocument.presentationml.presentation" or file_path.endswith(".pptx"):
-        text = extract_text_from_pptx(file_path)
+        docs = extract_text_from_pptx(file_path)
     else:
         logging.warning(f"[ChromaDB] Filetype tidak didukung: {filetype}")
         return False
+
+    if not docs:
+        logging.warning(f"[ChromaDB] Tidak ada teks yang diekstrak dari file: {file_path}")
+        return False
+
+    # Add user and file metadata to each document
+    for doc in docs:
+        doc.metadata.update(metadata or {})
+
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-    chunks = splitter.split_text(text)
+    chunks = splitter.split_documents(docs)
+    
     logging.info(f"[ChromaDB] Jumlah chunk yang akan di-embedding: {len(chunks)}")
-    docs = [Document(page_content=chunk, metadata=metadata or {}) for chunk in chunks]
-    # Logging sebelum embedding
-    logging.info(f"[ChromaDB] Mulai proses embedding dengan Google GenAI untuk {len(docs)} dokumen...")
-    vectorstore.add_documents(docs)
-    logging.info(f"[ChromaDB] Selesai indexing dan embedding file: {file_path}")
-    return True
+    if chunks:
+        vectorstore.add_documents(chunks)
+        logging.info(f"[ChromaDB] Selesai indexing dan embedding file: {file_path}")
+        return True
+    else:
+        logging.warning(f"[ChromaDB] Tidak ada chunk yang dihasilkan setelah splitting: {file_path}")
+        return False
 
 def query_rag(query, top_k=3, file_path=None):
     if file_path:

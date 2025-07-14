@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://user:password@localhost:5432/chatbotdb')
+DATABASE_URL = "postgresql://neondb_owner:npg_6nqige4LQGyP@ep-patient-grass-a1syuhgi-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require" #os.getenv('DATABASE_URL')
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -25,6 +25,7 @@ class Message(Base):
     __tablename__ = 'messages'
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id'))
+    role = Column(String, default='user')
     content = Column(Text)
     timestamp = Column(DateTime)
     user = relationship('User', back_populates='messages')
