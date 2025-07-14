@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = "postgresql://neondb_owner:npg_6nqige4LQGyP@ep-patient-grass-a1syuhgi-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require" #os.getenv('DATABASE_URL')
+DATABASE_URL = os.getenv('DATABASE_URL')
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
