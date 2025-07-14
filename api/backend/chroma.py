@@ -123,10 +123,14 @@ def query_rag(query, top_k=3, file_path=None):
         else:
             loaded_docs = []
 
-        text = " ".join([doc.page_content for doc in loaded_docs])
-        
+        # Add filename to metadata of each loaded document
+        filename = os.path.basename(file_path)
+        for doc in loaded_docs:
+            doc.metadata['filename'] = filename
+
         splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-        chunks = splitter.split_text(text)
+        chunks = splitter.split_documents(loaded_docs)
+        logging.info(f"[ChromaDB] Chunks metadata before adding to temp_collection: {[c.metadata for c in chunks]}")
         
         # Create a temporary collection for the specific file
         temp_collection_name = f"temp_rag_docs_{uuid.uuid4().hex}"
@@ -134,8 +138,8 @@ def query_rag(query, top_k=3, file_path=None):
         
         # Add documents to the temporary collection
         temp_collection.add(
-            documents=[chunk for chunk in chunks],
-            metadatas=[{"source": file_path}] * len(chunks),
+            documents=[chunk.page_content for chunk in chunks],
+            metadatas=[chunk.metadata for chunk in chunks],
             ids=[f"doc_{i}" for i in range(len(chunks))]
         )
         
@@ -152,9 +156,7 @@ def query_rag(query, top_k=3, file_path=None):
             for i, doc_content in enumerate(results['documents'][0]):
                 doc_metadata = results['metadatas'][0][i]
                 docs.append(Document(page_content=doc_content, metadata=doc_metadata))
-        
-        # Delete the temporary collection
-        chroma_client.delete_collection(name=temp_collection_name)
+        logging.info(f"[ChromaDB] Docs metadata after retrieval from temp_collection: {[d.metadata for d in docs]}")
         
         return docs
     else:
