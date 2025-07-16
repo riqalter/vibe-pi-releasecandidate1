@@ -1,20 +1,13 @@
-
-# Use a Python 3.11 base image with glibc
 FROM python:3.11-slim-bookworm
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Install uv and then Python dependencies using uv
-RUN pip install uv && uv pip install --system streamlit
+RUN pip install uv && uv pip install --system streamlit python-dotenv
 
-# Copy the frontend parts
 COPY main.py .
 COPY ./static ./static
 COPY ./.streamlit ./.streamlit
 
-# Expose the port that Streamlit will run on
 EXPOSE 8501
 
-# Command to run the Streamlit application
 CMD ["streamlit", "run", "main.py", "--server.port=8501", "--server.address=0.0.0.0"]
