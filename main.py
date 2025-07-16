@@ -2,6 +2,9 @@ import streamlit as st
 import requests
 import json
 import re
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # --- Page and Session Configuration ---
 st.set_page_config(
@@ -34,7 +37,7 @@ else:
         st.session_state['username'] = params['username']
 
 # --- API Configuration ---
-API_URL = "http://127.0.0.1:8000"
+API_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
 
 # --- API Functions ---
 def login_user(username, password):
@@ -135,20 +138,23 @@ if st.session_state['user_id'] is None:
                 st.error(msg)
     with register_tab:
         reg_username = st.text_input("Username", key="reg_username")
-        reg_password = st.text_input("Password", type="password", key="reg_password")
-        if st.button("Register"):
-            ok, msg = register_user(reg_username, reg_password)
-            if ok:
-                st.success("Registrasi berhasil! Silakan login.")
-            else:
-                st.error(msg)
+        if re.search(r'\s', reg_username):
+            st.info("Username tidak boleh ada spasi!")
+        else:
+            reg_password = st.text_input("Password", type="password", key="reg_password")
+            if st.button("Register"):
+                ok, msg = register_user(reg_username, reg_password)
+                if ok:
+                    st.success("Registrasi berhasil! Silakan login.")
+                else:
+                    st.error(msg)
     st.stop()
 
 # --- Main Application UI ---
 user_id = st.session_state['user_id']
 username = st.session_state['username']
 
-st.sidebar.write(f"Welcome, {username}!")
+st.sidebar.markdown(f"<h2>Welcome, {username}!</h2>", unsafe_allow_html=True)
 if st.sidebar.button("Reset History"):
     delete_chat_history(user_id)
     st.session_state.chat_history = []
@@ -208,7 +214,7 @@ for author, text, citations in st.session_state.chat_history:
         if citations:
             with st.expander("Lihat Sumber"):
                 for i, citation_text in enumerate(citations):
-                    st.markdown(f"**Sumber {i+1}:** {citation_text}")
+                    st.markdown(f"**{i+1}:** {citation_text}")
 
 # --- Recommended Prompts ---
 st.sidebar.title("Rekomendasi Prompt")
