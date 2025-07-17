@@ -1,2 +1,6 @@
+[server]
+headless = false
+enableCORS = false
+
 [theme]
 base="light"
