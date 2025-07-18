@@ -6,14 +6,12 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-# --- Page and Session Configuration ---
 st.set_page_config(
     page_title="Belajar dengan Chatbot",
     page_icon="🤖",
     layout="wide"
 )
 
-# --- Session State Initialization ---
 if 'user_id' not in st.session_state:
     st.session_state['user_id'] = None
 if 'username' not in st.session_state:
@@ -25,21 +23,16 @@ if 'file_id' not in st.session_state:
 if 'current_file_name' not in st.session_state:
     st.session_state['current_file_name'] = None
 
-# --- Persist login via query params ---
 if st.session_state['user_id'] and st.session_state['username']:
-    # If logged in, make sure URL reflects the state
     st.query_params = {"user_id": st.session_state['user_id'], "username": st.session_state['username']}
 else:
-    # If not logged in, check if the URL has login info
     params = st.query_params
     if 'user_id' in params and 'username' in params:
         st.session_state['user_id'] = int(params['user_id'])
         st.session_state['username'] = params['username']
 
-# --- API Configuration ---
 API_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
 
-# --- API Functions ---
 def login_user(username, password):
     try:
         response = requests.post(f"{API_URL}/login", json={"username": username, "password": password})
@@ -120,7 +113,6 @@ local_css("static/style.css")
 
 st.title("Belajar dengan Chatbot 🤖")
 
-# --- Login/Register UI ---
 if st.session_state['user_id'] is None:
     st.sidebar.title("Login / Register")
     login_tab, register_tab = st.sidebar.tabs(["Login", "Register"])
@@ -150,7 +142,6 @@ if st.session_state['user_id'] is None:
                     st.error(msg)
     st.stop()
 
-# --- Main Application UI ---
 user_id = st.session_state['user_id']
 username = st.session_state['username']
 
@@ -165,11 +156,9 @@ if st.sidebar.button("Logout"):
     st.query_params.clear()
     st.rerun()
 
-# Load chat history once after login
 if not st.session_state.chat_history:
     st.session_state.chat_history = [(msg['role'], msg['content'], msg.get('citations', [])) for msg in get_chat_history(user_id)]
 
-# --- File Management ---
 st.sidebar.title("File Anda")
 st.sidebar.file_uploader(
     "Upload file baru", 
@@ -200,7 +189,6 @@ if user_files:
                 delete_file(user_id, f['id'])
                 st.rerun()
 
-# --- Chat Interface ---
 st.header("Chat")
 if st.session_state.current_file_name:
     timestamp_regex = r'^\d{14}_'
@@ -212,11 +200,10 @@ for author, text, citations in st.session_state.chat_history:
     with st.chat_message(author):
         st.markdown(text)
         if citations:
-            with st.expander("Lihat Sumber"):
+            with st.expander("Lihat Sumber Jawaban 📚"):
                 for i, citation_text in enumerate(citations):
                     st.markdown(f"**{i+1}:** {citation_text}")
 
-# --- Recommended Prompts ---
 st.sidebar.title("Rekomendasi Prompt")
 num_prompts = st.sidebar.slider("Jumlah prompt:", min_value=1, max_value=10, value=3)
 if st.sidebar.button("Dapatkan Rekomendasi"):
@@ -231,7 +218,6 @@ if st.session_state.get("recommended_prompts"):
             st.session_state.prompt_from_recommendation = p
             st.rerun()
 
-# --- Chat Input ---
 prompt = st.chat_input("Tanyakan sesuatu...")
 if st.session_state.get("prompt_from_recommendation"):
     prompt = st.session_state.pop("prompt_from_recommendation")

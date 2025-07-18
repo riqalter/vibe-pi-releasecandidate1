@@ -15,7 +15,6 @@ def generate_answer(query, context_docs=None, history=None):
     if not context_docs:
         context = "No context provided."
     else:
-        # Build a context string that includes metadata for citation
         context_parts = []
         for doc in context_docs:
             source_info = ""
@@ -36,7 +35,7 @@ def generate_answer(query, context_docs=None, history=None):
     history_str = f"\n\nChat History:\n{history}" if history else ""
     
     prompt = f"""Anda adalah asisten AI yang membantu mahasiswa. Jawab pertanyaan pengguna berdasarkan konteks yang diberikan.
-Ketika Anda menggunakan informasi dari konteks, Anda HARUS mengutip sumbernya di akhir kalimat Anda menggunakan format [Sumber: nama file, Halaman/Slide: nomor].
+Ketika Anda menggunakan informasi dari konteks, Anda HARUS MENGINGAT UNTUK mengutip sumbernya di akhir PASTIKAN DAN JANGAN LUPAkalimat Anda menggunakan format [nama file, Halaman/Slide: nomor].
 Jika konteks tidak memberikan jawaban, katakan Anda tidak dapat menemukan jawabannya di dokumen yang diberikan.
 
 {history_str}
@@ -54,11 +53,9 @@ Answer:
     )
     answer = response.text
 
-    # Extract and format citations
     citation_pattern = r'\[(.*?)\]'
     citations_found = re.findall(citation_pattern, answer)
     
-    # Replace citations with numbers
     def replace_citation(match):
         return f"[{citations_found.index(match.group(1)) + 1}]"
 
@@ -73,8 +70,6 @@ def recommend_prompts(context_docs, n=6):
         model=MODEL_NAME,
         contents=prompt
     )
-    # Split the response text into lines, remove empty lines
     prompts_list = [p.strip() for p in response.text.split('\n') if p.strip()]
-    # Remove numbering (e.g., "1. ", "2. ")
     cleaned_prompts = [p.split('.', 1)[-1].strip() for p in prompts_list]
     return cleaned_prompts

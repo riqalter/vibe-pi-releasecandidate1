@@ -17,7 +17,7 @@ class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
-    password_hash = Column(String)  # tambahkan kolom ini
+    password_hash = Column(String) 
     messages = relationship('Message', back_populates='user')
     files = relationship('File', back_populates='user')
 
@@ -27,7 +27,7 @@ class Message(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
     role = Column(String, default='user')
     content = Column(Text)
-    citations_json = Column(Text, nullable=True) # New column for citations
+    citations_json = Column(Text, nullable=True) 
     timestamp = Column(DateTime)
     user = relationship('User', back_populates='messages')
 

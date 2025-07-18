@@ -19,16 +19,13 @@ load_dotenv()
 
 CHROMA_DIR = "chroma_db"
 
-# Inisialisasi ChromaDB
 chroma_client = chromadb.Client(Settings(persist_directory=CHROMA_DIR))
 
-# Embedding Google GenAI
 embedding = GoogleGenerativeAIEmbeddings(
     model="models/text-embedding-004",
     GOOGLE_API_KEY=os.getenv("GOOGLE_API_KEY", "")
     )
 
-# LangChain VectorStore
 vectorstore = Chroma(
     client=chroma_client,
     collection_name="rag_docs",
@@ -92,11 +89,10 @@ def index_file(file_path, filetype, metadata=None):
         logging.warning(f"[ChromaDB] Tidak ada teks yang diekstrak dari file: {file_path}")
         return False
 
-    # Add user and file metadata to each document
     for doc in docs:
         doc.metadata.update(metadata or {})
 
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
     chunks = splitter.split_documents(docs)
     
     logging.info(f"[ChromaDB] Jumlah chunk yang akan di-embedding: {len(chunks)}")
@@ -108,7 +104,7 @@ def index_file(file_path, filetype, metadata=None):
         logging.warning(f"[ChromaDB] Tidak ada chunk yang dihasilkan setelah splitting: {file_path}")
         return False
 
-def query_rag(query, top_k=3, file_path=None):
+def query_rag(query, top_k=10, file_path=None):
     if file_path:
         from langchain.text_splitter import RecursiveCharacterTextSplitter
         from langchain.docstore.document import Document
@@ -123,7 +119,6 @@ def query_rag(query, top_k=3, file_path=None):
         else:
             loaded_docs = []
 
-        # Add filename to metadata of each loaded document
         filename = os.path.basename(file_path)
         for doc in loaded_docs:
             doc.metadata['filename'] = filename
@@ -132,25 +127,21 @@ def query_rag(query, top_k=3, file_path=None):
         chunks = splitter.split_documents(loaded_docs)
         logging.info(f"[ChromaDB] Chunks metadata before adding to temp_collection: {[c.metadata for c in chunks]}")
         
-        # Create a temporary collection for the specific file
         temp_collection_name = f"temp_rag_docs_{uuid.uuid4().hex}"
         temp_collection = chroma_client.create_collection(name=temp_collection_name)
         
-        # Add documents to the temporary collection
         temp_collection.add(
             documents=[chunk.page_content for chunk in chunks],
             metadatas=[chunk.metadata for chunk in chunks],
             ids=[f"doc_{i}" for i in range(len(chunks))]
         )
         
-        # Perform similarity search on the temporary collection
         results = temp_collection.query(
             query_texts=[query],
             n_results=top_k,
             include=['documents', 'metadatas']
         )
         
-        # Extract documents from results
         docs = []
         if results and results['documents']:
             for i, doc_content in enumerate(results['documents'][0]):

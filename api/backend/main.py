@@ -83,7 +83,7 @@ def chat(user_id: int = Form(...), message: str = Form(...), file_id: int = Form
         if not file:
             return {"answer": "File tidak ditemukan."}
         file_path = os.path.join(UPLOAD_DIR, str(file.filename))
-        docs = query_rag(message, top_k=5, file_path=file_path)
+        docs = query_rag(message, top_k=10, file_path=file_path)
     else:
         docs = query_rag(message)
     
@@ -100,14 +100,14 @@ def recommend_prompt(user_id: int, file_id: int = None, n: int = 6, db: Session 
         if not file:
             return {"prompts": []}
         file_path = os.path.join(UPLOAD_DIR, str(file.filename))
-        docs = query_rag("", top_k=5, file_path=file_path)
+        docs = query_rag("", top_k=10, file_path=file_path)
     else:
         files = db.query(DBFile).filter(DBFile.user_id == user_id).order_by(DBFile.upload_time.desc()).limit(1).all()
         if not files:
             return {"prompts": []}
         file = files[0]
         file_path = os.path.join(UPLOAD_DIR, str(file.filename))
-        docs = query_rag("", top_k=5, file_path=file_path)
+        docs = query_rag("", top_k=10, file_path=file_path)
     
     prompts = recommend_prompts(docs, n=n)
     return {"prompts": prompts}
